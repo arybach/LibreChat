@@ -20,10 +20,14 @@ services:
       - MEILI_HOST=http://meilisearch:7700
       - RAG_PORT=${RAG_PORT:-8000}
       - RAG_API_URL=http://rag_api:${RAG_PORT:-8000}
+      - SEARCH_AGGREGATOR_URL=http://search_aggregator:3001
     volumes:
       - type: bind
         source: ./.env
         target: /app/.env
+      - type: bind
+        source: ./librechat.yaml
+        target: /app/librechat.yaml
       - ./images:/app/client/public/images
       - ./uploads:/app/uploads
       - ./logs:/app/logs
@@ -67,6 +71,56 @@ services:
       - vectordb
     env_file:
       - .env
+  search_aggregator:
+    container_name: search_aggregator
+    build:
+      context: ./search-aggregator
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./marketplace-cookies:/app/marketplace-cookies:ro
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/LibreChat
+      - PORT=3001
+      - NODE_ENV=production
+      - SEARCH_LOCATIONS=${SEARCH_LOCATIONS:-New York,Los Angeles,Chicago}
+      - SEARCH_CATEGORIES=${SEARCH_CATEGORIES:-furniture,apartments,motorcycles,autos}
+      - CRON_SCHEDULE=${CRON_SCHEDULE:-0 6 * * *}
+      - MAX_RESULTS_PER_SEARCH=${MAX_RESULTS_PER_SEARCH:-50}
+      - ENABLE_FACEBOOK=${ENABLE_FACEBOOK:-false}
+      - ENABLE_CRAIGSLIST=${ENABLE_CRAIGSLIST:-true}
+      - ENABLE_OFFERUP=${ENABLE_OFFERUP:-false}
+      - FACEBOOK_COOKIES_FILE=/app/marketplace-cookies/facebook.json
+      - FACEBOOK_GROUP_IDS=${FACEBOOK_GROUP_IDS:-}
+    restart: always
+    depends_on:
+      - mongodb
+  
+  ollama:
+    container_name: ollama_rocm
+    image: ollama/ollama:rocm
+    ports:
+      - "11434:11434"
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    group_add:
+      - "44"    # video group
+      - "991"   # render group
+    environment:
+      - HSA_OVERRIDE_GFX_VERSION=11.5.1
+      - OLLAMA_HOST=0.0.0.0:11434
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 volumes:
   pgdata2:
+  ollama_data:

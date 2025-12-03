@@ -1,0 +1,174 @@
+const puppeteer = require('puppeteer');
+const fs = require('fs').promises;
+const Listing = require('../models/Listing');
+
+/**
+ * Load Facebook cookies from file or environment variable
+ */
+async function loadFacebookCookies() {
+  try {
+    // Try loading from file first
+    if (process.env.FACEBOOK_COOKIES_FILE) {
+      const cookiesJson = await fs.readFile(process.env.FACEBOOK_COOKIES_FILE, 'utf8');
+      return JSON.parse(cookiesJson);
+    }
+    
+    // Fall back to environment variable
+    if (process.env.FACEBOOK_COOKIES) {
+      return JSON.parse(process.env.FACEBOOK_COOKIES);
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('⚠️  Failed to load Facebook cookies:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Scrape Facebook Marketplace listings
+ * Supports authenticated sessions via cookies for better results
+ */
+async function scrape(locations, categories) {
+  let totalCount = 0;
+  const maxResults = Number(process.env.MAX_RESULTS_PER_SEARCH || 50);
+  const cookies = await loadFacebookCookies();
+
+  if (!cookies) {
+    console.warn('⚠️  Facebook scraping without authentication - results may be limited');
+    console.warn('⚠️  See MARKETPLACE_AUTH_GUIDE.md for authentication setup');
+  } else {
+    console.log('✅ Using authenticated Facebook session');
+  }
+
+  try {
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+
+    for (const location of locations) {
+      for (const category of categories) {
+        try {
+          const page = await browser.newPage();
+          
+          // Set realistic user agent
+          await page.setUserAgent(
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          );
+
+          // Load cookies if available (authenticated session)
+          if (cookies && Array.isArray(cookies)) {
+            // Filter out unsupported cookie properties (partitionKey, storeId, firstPartyDomain)
+            const cleanCookies = cookies.map(cookie => {
+              const { partitionKey, storeId, firstPartyDomain, expirationDate, ...rest } = cookie;
+              return {
+                ...rest,
+                // Convert expirationDate to expires (Unix timestamp)
+                ...(expirationDate ? { expires: expirationDate } : {})
+              };
+            });
+            await page.setCookie(...cleanCookies);
+            console.log('  ✅ Loaded Facebook authentication cookies');
+          }
+
+          // Facebook Marketplace URL structure (may need adjustment)
+          const searchQuery = getCategoryQuery(category);
+          const url = `https://www.facebook.com/marketplace/${location.toLowerCase().replace(/\s+/g, '')}/${searchQuery}`;
+          
+          console.log(`  Attempting to scrape: ${url}`);
+          
+          await page.goto(url, {
+            waitUntil: 'networkidle2',
+            timeout: Number(process.env.SCRAPE_TIMEOUT_MS || 30000),
+          });
+
+          // Wait for listings to load (selector may need adjustment)
+          await page.waitForSelector('[data-testid="marketplace-feed-item"]', { timeout: 5000 }).catch(() => {
+            console.warn('  Could not find marketplace items - may require login');
+          });
+
+          // Extract listings
+          const listings = await page.evaluate((maxResults, category, location) => {
+            const items = [];
+            const elements = document.querySelectorAll('[data-testid="marketplace-feed-item"]');
+            
+            for (let i = 0; i < Math.min(elements.length, maxResults); i++) {
+              const el = elements[i];
+              try {
+                const titleEl = el.querySelector('span');
+                const priceEl = el.querySelector('[class*="price"]');
+                const linkEl = el.querySelector('a');
+                const imageEl = el.querySelector('img');
+                
+                if (titleEl && linkEl) {
+                  items.push({
+                    title: titleEl.textContent.trim(),
+                    price: priceEl ? parseFloat(priceEl.textContent.replace(/[$,]/g, '')) : 0,
+                    url: linkEl.href,
+                    imageUrls: imageEl?.src ? [imageEl.src] : [],
+                    platform: 'facebook',
+                    category,
+                    location,
+                  });
+                }
+              } catch (err) {
+                console.error('Error parsing item:', err);
+              }
+            }
+            
+            return items;
+          }, maxResults, category, location);
+
+          // Save listings to database
+          for (const listing of listings) {
+            try {
+              await Listing.findOneAndUpdate(
+                { url: listing.url },
+                {
+                  ...listing,
+                  scrapedAt: new Date(),
+                  isActive: true,
+                },
+                { upsert: true, new: true },
+              );
+              totalCount++;
+            } catch (err) {
+              if (err.code !== 11000) {
+                console.error('Error saving listing:', err.message);
+              }
+            }
+          }
+
+          await page.close();
+          
+          // Delay between requests
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        } catch (error) {
+          console.error(`Error scraping ${category} in ${location}:`, error.message);
+        }
+      }
+    }
+
+    await browser.close();
+  } catch (error) {
+    console.error('Facebook scraper error:', error.message);
+    throw error;
+  }
+
+  return totalCount;
+}
+
+function getCategoryQuery(category) {
+  const map = {
+    furniture: 'furniture',
+    apartments: 'propertyrentals',
+    motorcycles: 'motorcycles',
+    autos: 'vehicles',
+  };
+  return map[category] || 'search';
+}
+
+module.exports = {
+  scrape,
+};

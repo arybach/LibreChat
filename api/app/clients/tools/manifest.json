@@ -179,5 +179,13 @@
         "description": "Provide your Flux API key from your user profile."
       }
     ]
+  },
+  {
+    "name": "Marketplace Search",
+    "pluginKey": "marketplace",
+    "toolkit": true,
+    "description": "Search for listings from Facebook Marketplace, Craigslist, OfferUp and other platforms. Find furniture, apartments, motorcycles, cars, and more.",
+    "icon": "https://i.imgur.com/BkqJCPx.png",
+    "authConfig": []
   }
 ]
