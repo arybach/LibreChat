@@ -11,10 +11,14 @@ Your LibreChat instance has the Marketplace Search tool fully integrated:
 
 ## 🎯 How to Use the Marketplace Tool
 
+⚠️ **IMPORTANT**: The marketplace tool ONLY works with **Agents**, not regular chat!
+
+You cannot just ask the model directly - you MUST create and use an Agent with the tool enabled.
+
 ### Step 1: Access LibreChat
 Open your browser to: http://localhost:3080
 
-### Step 2: Create an Agent with Marketplace Tool
+### Step 2: Create an Agent with Marketplace Tool (REQUIRED!)
 
 1. **Click "Agents"** in the left sidebar (icon with robot head)
 2. **Click "+ New Agent"** button
@@ -29,11 +33,16 @@ Open your browser to: http://localhost:3080
 
 5. **Click "Create" or "Save"**
 
-### Step 3: Test the Tool
+### Step 3: Use the Agent (NOT Regular Chat!)
+
+⚠️ **CRITICAL**: You MUST select the agent you created!
 
 1. **Start a new conversation**
-2. **Select your "Marketplace Assistant" agent** from the dropdown
-3. **Try these queries:**
+2. **In the top bar, click the dropdown** (next to the model selector)
+3. **Select "Agents" tab**
+4. **Choose your "Marketplace Assistant" agent**
+5. **Verify the agent icon appears** in the conversation
+6. **Now try these queries:**
 
 ```
 Show me the most recent furniture ads in Miami
@@ -79,6 +88,23 @@ Your database currently has:
 - **Last Updated**: Check with: `curl http://localhost:3001/api/listings/stats`
 
 ## 🛠️ Troubleshooting
+
+### ❌ "I can't access real-time data" Response
+
+**Problem**: Model says it can't access search results or gives generic advice
+
+**Solution**: You're NOT using an Agent! The tool only works with Agents.
+
+**Fix**:
+1. **Stop using regular chat mode**
+2. **Create an Agent** (Step 2 above)
+3. **Select that specific Agent** in your conversation
+4. **Verify the agent icon/badge** appears next to your messages
+
+**How to verify you're using an agent**:
+- Look for an agent badge/icon in the UI
+- The conversation should show "Agent: [Your Agent Name]"
+- The dropdown should show your agent selected (not just the model)
 
 ### Tool Not Appearing
 1. Verify agents are enabled:
