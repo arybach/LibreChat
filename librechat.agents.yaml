@@ -1,0 +1,56 @@
+# LibreChat Configuration with Agents & Marketplace Tool
+# https://www.librechat.ai/docs/configuration/librechat_yaml
+#
+# Copy this to librechat.yaml to enable agents and tools
+# cp librechat.agents.yaml librechat.yaml
+
+version: 1.3.1
+
+# Enable caching for better performance
+cache: true
+
+# Interface configuration
+interface:
+  endpointsMenu: true
+  modelSelect: true
+  parameters: true
+  agents: true  # REQUIRED: Enable agents interface
+
+# Endpoints configuration
+endpoints:
+  # Agents configuration - REQUIRED for tool usage
+  agents:
+    disableBuilder: false  # Allow creating custom agents
+    capabilities: ["execute_code", "file_search", "actions", "tools"]  # Enable all tool capabilities
+  
+  custom:
+    # Ollama with ROCm (Self-hosted on AMD GPU)
+    - name: "Ollama ROCm"
+      apiKey: "ollama"
+      baseURL: "http://ollama:11434/v1"
+      models:
+        default:
+          - "qwen3:8b"
+          - "qwen2.5:7b"
+        fetch: true
+      titleConvo: true
+      titleModel: "qwen3:8b"
+      summarize: false
+      modelDisplayLabel: "Ollama (AMD Radeon 8060S)"
+      iconURL: "https://avatars.githubusercontent.com/u/151674099"
+      
+    # Groq - Fast inference (requires API key)
+    - name: "Groq"
+      apiKey: "${GROQ_API_KEY}"
+      baseURL: "https://api.groq.com/openai/v1/"
+      models:
+        default:
+          - "llama-3.3-70b-versatile"
+          - "llama-3.1-8b-instant"
+          - "mixtral-8x7b-32768"
+          - "gemma2-9b-it"
+        fetch: false
+      titleConvo: true
+      titleModel: "mixtral-8x7b-32768"
+      modelDisplayLabel: "Groq"
+      iconURL: "https://groq.com/favicon.ico"
