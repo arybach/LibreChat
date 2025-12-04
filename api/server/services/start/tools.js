@@ -5,7 +5,7 @@ const { Calculator } = require('@librechat/agents');
 const { logger } = require('@librechat/data-schemas');
 const { zodToJsonSchema } = require('zod-to-json-schema');
 const { Tools, ImageVisionTool } = require('librechat-data-provider');
-const { getToolkitKey, oaiToolkit, ytToolkit } = require('@librechat/api');
+const { getToolkitKey, oaiToolkit, ytToolkit, marketplaceToolkit } = require('@librechat/api');
 const { toolkits } = require('~/app/clients/tools/manifest');
 
 /**
@@ -97,6 +97,25 @@ function loadAndFormatTools({ directory, adminFilter = [], adminIncluded = [] })
       continue;
     }
     tools.push(formattedTool);
+  }
+
+  // Add marketplace tools
+  try {
+    const createMarketplaceTools = require('../../app/clients/tools/structured/Marketplace');
+    const marketplaceTools = createMarketplaceTools();
+    for (const toolInstance of marketplaceTools) {
+      const formattedTool = formatToOpenAIAssistantTool(toolInstance);
+      const toolName = formattedTool[Tools.function].name;
+      if (filter.has('marketplace') && included.size === 0) {
+        continue;
+      }
+      if (included.size > 0 && !included.has('marketplace')) {
+        continue;
+      }
+      tools.push(formattedTool);
+    }
+  } catch (error) {
+    logger.error('[loadAndFormatTools] Error loading marketplace tools:', error);
   }
 
   tools.push(ImageVisionTool);
