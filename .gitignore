@@ -1,0 +1,24 @@
+.env
+.env.backup
+.log
+logs/*
+.bin
+.mongodb
+.tmp
+.cache
+_tmp
+
+# MongoDB data files
+data-node/
+
+# Meili data
+meili_data*/
+
+# Node modules
+node_modules/
+
+# Docker overrides
+docker-compose.override.yml
+
+# Marketplace cookies
+marketplace-cookies/
