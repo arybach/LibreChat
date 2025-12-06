@@ -25,7 +25,8 @@ Open your browser to: http://localhost:3080
 3. Configure your agent:
    - **Name**: "Marketplace Assistant" (or any name)
    - **Description**: "Searches for items on Craigslist, Facebook Marketplace, and OfferUp"
-   - **Model**: Select "Ollama ROCm" → "qwen3:8b"
+   - **Provider**: Select "Ollama ROCm"
+   - **Model**: Select "qwen3:8b" (Only model verified to work with this tool)
    
 4. **Scroll down to "Tools" section**
    - Find and **check** the box for **"Marketplace Search"**
@@ -231,12 +232,27 @@ docker-compose restart search_aggregator
 ```
 
 ### Add Facebook Groups
-Edit `.env`:
-```bash
-FACEBOOK_GROUP_IDS=group1,group2,group3
-```
 
-Update cookies if needed and restart.
+1. **Export your Facebook cookies** (see `search-aggregator/EXPORT_FACEBOOK_COOKIES.md`):
+   - Install EditThisCookie extension (Chrome) or Cookie-Editor (Firefox)
+   - While logged into Facebook, click the extension and export cookies
+   - Save to `marketplace-cookies/facebook.json`
+
+2. **Add group IDs to `.env`**:
+   ```bash
+   # Extract ID from URL: https://www.facebook.com/groups/802339673139879/
+   FACEBOOK_GROUP_IDS=802339673139879,another_group_id
+   ```
+
+3. **Enable Facebook scraping**:
+   ```bash
+   ENABLE_FACEBOOK=true
+   ```
+
+4. **Restart**:
+   ```bash
+   docker-compose restart search_aggregator
+   ```
 
 ## 📚 API Endpoints
 

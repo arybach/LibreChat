@@ -31,7 +31,6 @@ endpoints:
       models:
         default:
           - "qwen3:8b"
-          - "qwen2.5:7b"
         fetch: true
       titleConvo: true
       titleModel: "qwen3:8b"

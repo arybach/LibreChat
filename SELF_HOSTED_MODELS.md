@@ -1,45 +1,34 @@
 # Setting Up Self-Hosted Models with LibreChat
 
-## Option 1: Ollama (Recommended - Easy & Free)
+## Option 1: Ollama with ROCm (AMD GPU Support)
 
-### Install Ollama
+### Using Docker Compose (Recommended)
 
-```bash
-# On Linux/macOS
-curl -fsSL https://ollama.com/install.sh | sh
-
-# On Windows
-# Download from https://ollama.com/download
-```
-
-### Start Ollama
+Your `docker-compose.yml` already includes Ollama with ROCm support for AMD GPUs:
 
 ```bash
-# Ollama runs on port 11434 by default
-ollama serve
-```
+# Start Ollama ROCm container
+docker-compose up -d ollama
 
-### Pull Models
-
-```bash
-# Recommended models (pick based on your hardware)
-
-# Small & Fast (3-4GB RAM)
-ollama pull llama3.2:3b
-ollama pull phi3:latest
-
-# Medium (8GB+ RAM)
-ollama pull llama3.2:latest
-ollama pull qwen2.5:latest
-ollama pull mistral:latest
-
-# Large & Powerful (16GB+ RAM)
-ollama pull llama3.1:70b
-ollama pull codellama:latest
+# Pull the recommended model (qwen3:8b works best with Marketplace Search tool)
+docker exec -it ollama_rocm ollama pull qwen3:8b
 
 # List installed models
-ollama list
+docker exec -it ollama_rocm ollama list
 ```
+
+### Supported Models
+
+```bash
+# Recommended for Marketplace Search Agent
+docker exec -it ollama_rocm ollama pull qwen3:8b  # Best tool calling support
+
+# Other models (not tested with Marketplace tool)
+docker exec -it ollama_rocm ollama pull llama3.2:3b
+docker exec -it ollama_rocm ollama pull phi3:latest
+```
+
+**Note**: Only `qwen3:8b` has been verified to work correctly with the Marketplace Search tool. Other models may not properly execute tool calls.
 
 ### Verify Ollama is Working
 
@@ -90,43 +79,42 @@ ollama run llama3.2:latest "Hello, how are you?"
 ## Current Configuration
 
 Your `librechat.yaml` is already configured with:
-- ✅ Ollama on `http://host.docker.internal:11434`
-- ✅ LM Studio on `http://host.docker.internal:1234`
+- ✅ Ollama ROCm on `http://ollama_rocm:11434` (AMD GPU via Docker)
 - ✅ Groq (if API key provided)
 - ✅ Username login enabled
 
-## Recommended Models for Different Use Cases
+## Recommended Model for Marketplace Search
 
-| Use Case | Model | Size | Speed |
-|----------|-------|------|-------|
-| **General Chat** | llama3.2:latest | 2GB | Fast |
-| **Coding** | codellama:latest | 3.8GB | Fast |
-| **Reasoning** | qwen2.5:latest | 4.7GB | Medium |
-| **Fast & Light** | phi3:latest | 2.3GB | Very Fast |
-| **Powerful** | llama3.1:70b | 40GB | Slow |
+| Model | Size | Purpose | Status |
+|-------|------|---------|--------|
+| **qwen3:8b** | ~5GB | Marketplace Search Agent | ✅ Verified Working |
+
+**Important**: Only `qwen3:8b` has been tested and verified to correctly execute the Marketplace Search tool. Other models have shown issues with tool calling.
 
 ## Troubleshooting
 
 ### Ollama Not Connecting
 
-1. Check Ollama is running:
+1. Check Ollama container is running:
+   ```bash
+   docker-compose ps ollama
+   ```
+
+2. Test Ollama API:
    ```bash
    curl http://localhost:11434/v1/models
    ```
 
-2. If using Docker on Windows/Mac, ensure Ollama can be accessed:
+3. Check LibreChat can reach Ollama:
    ```bash
-   # Test from inside Docker
-   docker-compose exec api curl http://host.docker.internal:11434/v1/models
+   docker-compose exec api curl http://ollama_rocm:11434/v1/models
    ```
-
-3. On Linux, you may need to use `http://172.17.0.1:11434` instead
 
 ### No Models Appearing
 
-1. Pull at least one model first:
+1. Pull the recommended model:
    ```bash
-   ollama pull llama3.2:latest
+   docker exec -it ollama_rocm ollama pull qwen3:8b
    ```
 
 2. Restart LibreChat:
@@ -154,11 +142,12 @@ If you still can't log in with username:
 
 ## Next Steps
 
-1. **Install Ollama** (if not already installed)
-2. **Pull a model**: `ollama pull llama3.2:latest`
+1. **Start Ollama**: `docker-compose up -d ollama`
+2. **Pull qwen3:8b**: `docker exec -it ollama_rocm ollama pull qwen3:8b`
 3. **Restart LibreChat**: `docker-compose restart api`
-4. **Test it out**: Create a chat and select "Ollama" endpoint
-5. **Try with Agents**: Use your local model to search marketplace listings!
+4. **Create an Agent**: Use "Ollama ROCm" endpoint with "qwen3:8b" model
+5. **Enable Marketplace Search tool**: Check the tool in agent settings
+6. **Test**: Ask the agent to search for marketplace listings!
 
 ## Benefits of Self-Hosted Models
 
