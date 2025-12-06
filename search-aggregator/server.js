@@ -5,11 +5,12 @@ const cron = require('node-cron');
 const mongoose = require('mongoose');
 const { runAllScrapers } = require('./scrapers');
 const { searchListings, getCategories, getStats } = require('./controllers/listingsController');
+const alertsRouter = require('./routes/alerts');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/LibreChat';
-const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 6 * * *'; // Default: 6 AM daily
+const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 6,12,18 * * *'; // Default: 6 AM, 12 PM, 6 PM daily
 
 // Middleware
 app.use(cors());
@@ -38,6 +39,9 @@ app.get('/health', (req, res) => {
 app.get('/api/listings/search', searchListings);
 app.get('/api/listings/categories', getCategories);
 app.get('/api/listings/stats', getStats);
+
+// Search alerts routes
+app.use('/api', alertsRouter);
 
 // Manual trigger for scraping
 app.post('/api/scrape/trigger', async (req, res) => {
@@ -77,11 +81,16 @@ if (process.env.NODE_ENV !== 'test') {
 app.listen(PORT, () => {
   console.log(`🚀 Search Aggregator Service running on port ${PORT}`);
   console.log(`📊 API endpoints:`);
-  console.log(`   - GET  /health`);
-  console.log(`   - GET  /api/listings/search`);
-  console.log(`   - GET  /api/listings/categories`);
-  console.log(`   - GET  /api/listings/stats`);
-  console.log(`   - POST /api/scrape/trigger`);
+  console.log(`   - GET    /health`);
+  console.log(`   - GET    /api/listings/search`);
+  console.log(`   - GET    /api/listings/categories`);
+  console.log(`   - GET    /api/listings/stats`);
+  console.log(`   - POST   /api/scrape/trigger`);
+  console.log(`   - POST   /api/alerts`);
+  console.log(`   - GET    /api/alerts/:userId`);
+  console.log(`   - PUT    /api/alerts/:userId/:alertId`);
+  console.log(`   - DELETE /api/alerts/:userId/:alertId`);
+  console.log(`   - POST   /api/alerts/:userId/:alertId/test`);
 });
 
 module.exports = app;

@@ -16,7 +16,7 @@ const listingSchema = mongoose.Schema(
     platform: {
       type: String,
       required: true,
-      enum: ['facebook', 'craigslist', 'offerup', 'letgo', 'other'],
+      enum: ['facebook', 'craigslist', 'offerup', 'ebay', 'nextdoor', 'walmart', 'ikea', 'wayfair', 'overstock', 'letgo', 'other'],
       index: true,
     },
     category: {

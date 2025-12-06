@@ -174,8 +174,182 @@ const marketplaceCategoriesTool = tool(
   }
 );
 
+/**
+ * Create Search Alert Tool
+ */
+const createSearchAlertTool = tool(
+  async ({ userId, name, keywords, categories, locations, platforms, minPrice, maxPrice, telegramChatId, whatsappPhone }) => {
+    try {
+      const alertData = {
+        userId,
+        name,
+        keywords: Array.isArray(keywords) ? keywords : [keywords],
+        categories: categories || ['furniture'],
+        locations: locations || [],
+        platforms: platforms || ['facebook', 'craigslist', 'ebay'],
+        priceMin: minPrice || 0,
+        priceMax: maxPrice || null,
+        notificationChannels: {
+          telegram: {
+            enabled: !!telegramChatId,
+            chatId: telegramChatId || null,
+          },
+          whatsapp: {
+            enabled: !!whatsappPhone,
+            phoneNumber: whatsappPhone || null,
+          },
+        },
+        isActive: true,
+      };
+
+      const response = await axios.post(
+        `${SEARCH_AGGREGATOR_URL}/api/alerts`,
+        alertData,
+        { timeout: 5000 }
+      );
+
+      if (!response.data.success) {
+        return `Error creating alert: ${response.data.error}`;
+      }
+
+      const alert = response.data.alert;
+      
+      let result = `✅ Search alert created successfully!\n\n`;
+      result += `Name: ${alert.name}\n`;
+      result += `Keywords: ${alert.keywords.join(', ')}\n`;
+      result += `Categories: ${alert.categories.join(', ')}\n`;
+      result += `Price Range: $${alert.priceMin} - ${alert.priceMax || 'unlimited'}\n`;
+      result += `Alert ID: ${alert._id}\n\n`;
+      
+      if (alert.notificationChannels.telegram.enabled) {
+        result += `📱 Telegram notifications enabled\n`;
+      }
+      if (alert.notificationChannels.whatsapp.enabled) {
+        result += `📱 WhatsApp notifications enabled\n`;
+      }
+      
+      result += `\nYou'll receive notifications when new listings match your criteria!`;
+
+      return result;
+    } catch (error) {
+      console.error('Create alert tool error:', error);
+      return `Error creating search alert: ${error.message}`;
+    }
+  },
+  {
+    name: 'create_search_alert',
+    description: 
+      'Create a personalized search alert that monitors marketplace listings and sends notifications (via Telegram or WhatsApp) ' +
+      'when new items matching the criteria appear. Users will be notified automatically 3 times per day when scrapers run.',
+    schema: z.object({
+      userId: z.string().describe('User ID from LibreChat'),
+      name: z.string().describe('Friendly name for this alert (e.g., "Cheap Furniture NYC")'),
+      keywords: z.union([z.string(), z.array(z.string())]).describe('Keywords to search for (e.g., ["sofa", "couch", "sectional"])'),
+      categories: z.array(z.enum(['furniture', 'apartments', 'motorcycles', 'autos', 'other'])).optional().describe('Categories to monitor'),
+      locations: z.array(z.string()).optional().describe('Locations to filter by (e.g., ["New York", "Brooklyn"])'),
+      platforms: z.array(z.string()).optional().describe('Platforms to monitor (craigslist, facebook, ebay, ikea, walmart, etc.)'),
+      minPrice: z.number().optional().describe('Minimum price'),
+      maxPrice: z.number().optional().describe('Maximum price'),
+      telegramChatId: z.string().optional().describe('Telegram chat ID for notifications'),
+      whatsappPhone: z.string().optional().describe('WhatsApp phone number for notifications (format: +1234567890)'),
+    }),
+  }
+);
+
+/**
+ * List User's Search Alerts Tool
+ */
+const listSearchAlertsTool = tool(
+  async ({ userId }) => {
+    try {
+      const response = await axios.get(`${SEARCH_AGGREGATOR_URL}/api/alerts/${userId}`, {
+        timeout: 5000,
+      });
+
+      if (!response.data.success) {
+        return `Error listing alerts: ${response.data.error}`;
+      }
+
+      const alerts = response.data.alerts;
+
+      if (alerts.length === 0) {
+        return 'You have no active search alerts. Use create_search_alert to set one up!';
+      }
+
+      let result = `Your Search Alerts (${alerts.length}):\n\n`;
+      
+      alerts.forEach((alert, index) => {
+        result += `${index + 1}. ${alert.name} ${alert.isActive ? '✅' : '❌'}\n`;
+        result += `   ID: ${alert._id}\n`;
+        result += `   Keywords: ${alert.keywords.join(', ')}\n`;
+        result += `   Categories: ${alert.categories.join(', ')}\n`;
+        result += `   Price Range: $${alert.priceMin} - ${alert.priceMax || 'unlimited'}\n`;
+        result += `   Matches Found: ${alert.matchCount}\n`;
+        if (alert.lastNotifiedAt) {
+          result += `   Last Notification: ${new Date(alert.lastNotifiedAt).toLocaleString()}\n`;
+        }
+        result += `   Notifications: `;
+        const channels = [];
+        if (alert.notificationChannels.telegram?.enabled) channels.push('Telegram');
+        if (alert.notificationChannels.whatsapp?.enabled) channels.push('WhatsApp');
+        result += channels.length > 0 ? channels.join(', ') : 'None';
+        result += '\n\n';
+      });
+
+      return result;
+    } catch (error) {
+      console.error('List alerts tool error:', error);
+      return `Error listing search alerts: ${error.message}`;
+    }
+  },
+  {
+    name: 'list_search_alerts',
+    description: 'List all search alerts for a user, showing their status, match counts, and notification settings.',
+    schema: z.object({
+      userId: z.string().describe('User ID from LibreChat'),
+    }),
+  }
+);
+
+/**
+ * Delete Search Alert Tool
+ */
+const deleteSearchAlertTool = tool(
+  async ({ userId, alertId }) => {
+    try {
+      const response = await axios.delete(
+        `${SEARCH_AGGREGATOR_URL}/api/alerts/${userId}/${alertId}`,
+        { timeout: 5000 }
+      );
+
+      if (!response.data.success) {
+        return `Error deleting alert: ${response.data.error}`;
+      }
+
+      return `✅ Search alert deleted successfully!`;
+    } catch (error) {
+      console.error('Delete alert tool error:', error);
+      if (error.response?.status === 404) {
+        return 'Alert not found. It may have already been deleted.';
+      }
+      return `Error deleting search alert: ${error.message}`;
+    }
+  },
+  {
+    name: 'delete_search_alert',
+    description: 'Delete a search alert by its ID.',
+    schema: z.object({
+      userId: z.string().describe('User ID from LibreChat'),
+      alertId: z.string().describe('Alert ID to delete'),
+    }),
+  }
+);
+
 module.exports = {
   marketplaceSearchTool,
   marketplaceStatsTool,
   marketplaceCategoriesTool,
+  createSearchAlertTool,
+  listSearchAlertsTool,
+  deleteSearchAlertTool,
 };

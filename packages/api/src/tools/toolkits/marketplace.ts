@@ -37,4 +37,49 @@ Example: (no parameters needed)`,
 Example: (no parameters needed)`,
     schema: z.object({}),
   },
+  create_search_alert: {
+    name: 'create_search_alert' as const,
+    description: `Create a personalized search alert that monitors marketplace listings and sends notifications when new items match.
+- Required: userId, name, keywords
+- Optional: categories, locations, platforms, minPrice, maxPrice, telegramChatId, whatsappPhone
+- Returns: Alert confirmation with ID
+- Use for: Setting up automatic notifications for specific items users are looking for
+- Notifications: Sent via Telegram/WhatsApp 3 times per day (6am, 12pm, 6pm)
+Example: userId="123" name="Cheap Sofas" keywords=["sofa","couch"] categories=["furniture"] maxPrice=300 telegramChatId="456789"`,
+    schema: z.object({
+      userId: z.string().describe('User ID from LibreChat'),
+      name: z.string().describe('Friendly name for this alert'),
+      keywords: z.union([z.string(), z.array(z.string())]).describe('Keywords to search for'),
+      categories: z.array(z.enum(['furniture', 'apartments', 'motorcycles', 'autos', 'other'])).optional(),
+      locations: z.array(z.string()).optional().describe('Locations to filter by'),
+      platforms: z.array(z.string()).optional().describe('Platforms to monitor'),
+      minPrice: z.number().optional(),
+      maxPrice: z.number().optional(),
+      telegramChatId: z.string().optional().describe('Telegram chat ID for notifications'),
+      whatsappPhone: z.string().optional().describe('WhatsApp phone number'),
+    }),
+  },
+  list_search_alerts: {
+    name: 'list_search_alerts' as const,
+    description: `List all active search alerts for a user.
+- Required: userId
+- Returns: List of user's alerts with match counts and notification settings
+- Use for: Showing user their configured alerts
+Example: userId="123"`,
+    schema: z.object({
+      userId: z.string().describe('User ID from LibreChat'),
+    }),
+  },
+  delete_search_alert: {
+    name: 'delete_search_alert' as const,
+    description: `Delete a search alert by ID.
+- Required: userId, alertId
+- Returns: Confirmation message
+- Use for: Removing unwanted alerts
+Example: userId="123" alertId="alert_abc123"`,
+    schema: z.object({
+      userId: z.string().describe('User ID from LibreChat'),
+      alertId: z.string().describe('Alert ID to delete'),
+    }),
+  },
 };

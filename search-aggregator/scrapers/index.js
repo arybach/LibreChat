@@ -7,9 +7,11 @@ const walmartScraper = require('./walmartScraper');
 const ikeaScraper = require('./ikeaScraper');
 const wayfairScraper = require('./wayfairScraper');
 const overstockScraper = require('./overstockScraper');
+const alertMatcher = require('../services/alertMatcher');
+const Listing = require('../models/Listing');
 
 /**
- * Run all enabled scrapers
+ * Run all enabled scrapers and process alerts
  */
 async function runAllScrapers() {
   const results = {
@@ -142,6 +144,27 @@ async function runAllScrapers() {
       console.error('❌ Overstock scraper error:', error.message);
       results.overstock.error = error.message;
     }
+  }
+
+  // Process alerts for new listings (last 1 hour)
+  try {
+    console.log('🔔 Processing search alerts...');
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const newListings = await Listing.find({
+      scrapedAt: { $gte: oneHourAgo },
+    }).limit(500);
+
+    if (newListings.length > 0) {
+      const alertResults = await alertMatcher.processNewListings(newListings);
+      results.alerts = alertResults;
+      console.log(`✅ Alerts processed: ${alertResults.matched} matches, ${alertResults.notified} notifications sent`);
+    } else {
+      console.log('ℹ️  No new listings to process for alerts');
+      results.alerts = { processed: 0, matched: 0, notified: 0 };
+    }
+  } catch (error) {
+    console.error('❌ Alert processing error:', error.message);
+    results.alerts = { error: error.message };
   }
 
   return results;
