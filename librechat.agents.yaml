@@ -1,0 +1,101 @@
+# LibreChat Configuration with Agents & Marketplace Tool
+# https://www.librechat.ai/docs/configuration/librechat_yaml
+#
+# Copy this to librechat.yaml to enable agents and tools
+# cp librechat.agents.yaml librechat.yaml
+
+version: 1.3.1
+
+# Enable caching for better performance
+cache: true
+
+# Interface configuration
+interface:
+  endpointsMenu: true
+  modelSelect: true
+  parameters: true
+  agents: true  # REQUIRED: Enable agents interface
+
+# Endpoints configuration
+endpoints:
+  # Agents configuration - REQUIRED for tool usage
+  agents:
+    disableBuilder: false  # Allow creating custom agents
+    capabilities: ["execute_code", "file_search", "actions", "tools"]  # Enable all tool capabilities
+  
+  custom:
+    # Ollama with ROCm (Self-hosted on AMD GPU)
+    - name: "Ollama ROCm"
+      apiKey: "ollama"
+      baseURL: "http://ollama:11434/v1"
+      models:
+        default:
+          - "qwen3:8b"
+        fetch: true
+      titleConvo: true
+      titleModel: "qwen3:8b"
+      summarize: false
+      modelDisplayLabel: "Ollama (AMD Radeon 8060S)"
+      iconURL: "https://avatars.githubusercontent.com/u/151674099"
+      
+    # Groq - Fast inference (requires API key)
+    - name: "Groq"
+      apiKey: "${GROQ_API_KEY}"
+      baseURL: "https://api.groq.com/openai/v1/"
+      models:
+        default:
+          - "llama-3.3-70b-versatile"
+          - "llama-3.1-8b-instant"
+          - "mixtral-8x7b-32768"
+          - "gemma2-9b-it"
+        fetch: false
+      titleConvo: true
+      titleModel: "mixtral-8x7b-32768"
+      modelDisplayLabel: "Groq"
+      iconURL: "https://groq.com/favicon.ico"
+
+# Agent definitions
+agentConfig:
+  - name: "Marketplace Search"
+    description: "Search Facebook Marketplace, Craigslist, eBay, IKEA, Walmart, and other platforms for furniture, cars, motorcycles, apartments, and more. Can also set up notification alerts."
+    instructions: |
+      You are a helpful marketplace search assistant. Your role is to:
+      
+      1. **Search Listings**: Use marketplace_search to find items users are looking for
+         - Extract category, location, price range from user's request
+         - Present results clearly with prices, locations, and clickable links
+      
+      2. **Set Up Alerts**: Use create_search_alert when users want notifications
+         - Ask for their Telegram chat ID if not provided
+         - Extract keywords, price range, and preferences
+         - Explain they'll get notifications 3x/day (6am, 12pm, 6pm)
+      
+      3. **Manage Alerts**: Use list_search_alerts and delete_search_alert as needed
+         - Show match counts and notification status
+         - Help users refine or remove alerts
+      
+      **Getting Telegram Chat ID**:
+      - User must start a chat with their configured Telegram bot
+      - Send any message to the bot
+      - Visit: https://api.telegram.org/bot<BOT_TOKEN>/getUpdates (replace <BOT_TOKEN> with actual token from .env)
+      - Look for "chat":{"id":XXXXXXX}
+      - That number is their chat ID
+      
+      **Important Notes**:
+      - Search results are from the last scrape (6am/12pm/6pm)
+      - Alerts check automatically 3x/day and send push notifications
+      - Users get notified on Telegram when matches are found
+      
+      Be conversational, helpful, and always confirm alert setups clearly.
+    
+    model: "Ollama ROCm/qwen3:8b"
+    tools:
+      - "marketplace_search"
+      - "marketplace_stats"
+      - "marketplace_categories"
+      - "create_search_alert"
+      - "list_search_alerts"
+      - "delete_search_alert"
+    avatar:
+      url: "https://raw.githubusercontent.com/tabler/tabler-icons/master/icons/outline/shopping-cart.svg"
+
