@@ -10,9 +10,19 @@ function createMarketplaceTools() {
     marketplaceSearchTool,
     marketplaceStatsTool,
     marketplaceCategoriesTool,
+    createSearchAlertTool,
+    listSearchAlertsTool,
+    deleteSearchAlertTool,
   } = require('../marketplace');
   
-  return [marketplaceSearchTool, marketplaceStatsTool, marketplaceCategoriesTool];
+  return [
+    marketplaceSearchTool,
+    marketplaceStatsTool,
+    marketplaceCategoriesTool,
+    createSearchAlertTool,
+    listSearchAlertsTool,
+    deleteSearchAlertTool,
+  ];
 }
 
 module.exports = createMarketplaceTools;

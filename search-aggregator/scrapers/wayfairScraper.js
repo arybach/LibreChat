@@ -1,6 +1,6 @@
-const axios = require('axios');
 const cheerio = require('cheerio');
 const Listing = require('../models/Listing');
+const scraperService = require('../utils/scraperService');
 
 /**
  * Wayfair scraper - Online furniture retailer
@@ -32,15 +32,8 @@ async function scrapeWayfair(locations, categories) {
       const url = `${WAYFAIR_BASE_URL}/keyword.php?keyword=${encodeURIComponent(wayfairCategory)}&command=dosearch&new_keyword_search=true`;
       
       console.log(`🔍 Scraping Wayfair: ${category}`);
-      console.log(`   URL: ${url}`);
 
-      const response = await axios.get(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        },
-        timeout: 15000,
-      });
+      const response = await scraperService.fetch(url, { timeout: 15000 });
 
       const $ = cheerio.load(response.data);
       const listings = [];
@@ -93,7 +86,7 @@ async function scrapeWayfair(locations, categories) {
       }
 
       console.log(`   Found ${listings.length} listings`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await scraperService.delay(2000);
 
     } catch (error) {
       console.error(`❌ Wayfair scrape failed for ${category}:`, error.message);
